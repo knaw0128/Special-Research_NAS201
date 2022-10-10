@@ -1,10 +1,10 @@
 name: NAS201
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python=3.9
-  - cudatoolkit=10.2
-  - cudnn=7.6
+  - cudatoolkit=11.2
+  - cudnn=8.1
   - pip
   - pip:
         - pip-tools

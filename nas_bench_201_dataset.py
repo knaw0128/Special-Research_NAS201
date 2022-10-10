@@ -625,9 +625,10 @@ class NasBench101Dataset(Dataset):
         output = [] 
 
         for i in range(self.start, self.end + 1):
+            print("Now reading No. {}".format(i))
             data = np.load(os.path.join(self.file_path, f'graph_{i}.npz'))
             label = np.delete(data['y'], [0,2,3], 0)
-            print(label)
+            # print(label)
             now = self.normalize(data['x'], self.features_dict['flops'])
             now = self.normalize(now, self.features_dict['params'])
 
