@@ -19,6 +19,8 @@ from os import path
 import re
 import hashlib
 import model_builder
+from argparse import ArgumentParser
+
 
 logging.basicConfig(filename='nas_bench_101_dataset.log', level=logging.INFO)
 
@@ -653,7 +655,17 @@ class NasBench101Dataset(Dataset):
 
 
 if __name__ == '__main__':
-    file = open('./model_label.pkl', 'rb')
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        help="Choosing which dataset to use",
+        default='cifar10-valid',
+        choices=['cifar10-valid', 'cifar10', 'cifar100', 'ImageNet16-120'],
+    )
+    args = parser.parse_args()
+
+    file = open(path.join('./NASBENCH_201_dict', args.dataset+'_model_label.pkl'), 'rb')
     record = pickle.load(file)
     file.close()
 
