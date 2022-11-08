@@ -318,7 +318,7 @@ def get_model_by_id_and_layer_original(cell_filename, shuffle_seed: int, inputs_
 
 
 class NasBench101Dataset(Dataset):
-    def __init__(self, start, end, record_dic=None, shuffle_seed=0, inputs_shape=None, num_classes=10, **kwargs):
+    def __init__(self, start, end, record_dic=None, shuffle_seed=0, inputs_shape=None, num_classes=10, dataset_name='cifar10-valid' **kwargs):
         """
         :param start: The start index of data you want to query.
         :param end: The end index of data you want to query.
@@ -343,9 +343,9 @@ class NasBench101Dataset(Dataset):
         self.num_classes = num_classes
         self.start = start
         self.end = end
-        self.file_path = 'NasBench201Dataset'
+        self.file_path = 'NasBench201Dataset_'+dataset_name
         self.shuffle_seed = shuffle_seed
-        self.cell_filename = './model_label.pkl'
+        self.cell_filename = path.join('./NASBENCH_201_dict', dataset_name+'_model_label.pkl')
         self.total_layers = 19
         self.record_dic = record_dic
 
@@ -627,14 +627,18 @@ class NasBench101Dataset(Dataset):
         for i in range(self.start, self.end + 1):
             print("Now reading No. {}".format(i))
             data = np.load(os.path.join(self.file_path, f'graph_{i}.npz'))
+            # 0: train_accuracy 1: valid_accuracy 2: test_accuracy 3: train_time
             label = np.delete(data['y'], [0,2,3], 0)
             # print(label)
             now = self.normalize(data['x'], self.features_dict['flops'])
             now = self.normalize(now, self.features_dict['params'])
-
-            output.append(
-                Graph(x=now, e=data['e'], a=data['a'], y=label)
-            )
+            time = 1
+            if label[0] < 40:
+                time = 5
+            for i in range(time):
+                output.append(
+                    Graph(x=now, e=data['e'], a=data['a'], y=label)
+                )
         return output
     
     def normalize(self, target, idx):
