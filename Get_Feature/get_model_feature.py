@@ -73,10 +73,10 @@ def main(args):
 
         if(args.dataset in ['cifar100', 'ImageNet16-120']):
             xtest_met = arch.get_metrics(args.dataset,'x-test')
-            record['test_accuracy'] = xtest_met['accuracy']
-            record['test_loss'] = xtest_met['loss']
-            record['test_time'] = xtest_met['cur_time']
-            record['test_accu_time'] = xtest_met['all_time']
+            record['x-test_accuracy'] = xtest_met['accuracy']
+            record['x-test_loss'] = xtest_met['loss']
+            record['x-test_time'] = xtest_met['cur_time']
+            record['x-test_accu_time'] = xtest_met['all_time']
         
         arch_str = api.query_info_str_by_arch(i).split('\n')[0]
         tmp_list = api.str2lists(arch_str)
