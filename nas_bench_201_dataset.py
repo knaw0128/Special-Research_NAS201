@@ -320,7 +320,9 @@ def get_model_by_id_and_layer_original(cell_filename, shuffle_seed: int, inputs_
 
 
 class NasBench101Dataset(Dataset):
-    def __init__(self, start, end, record_dic=None, shuffle_seed=0, inputs_shape=None, num_classes=10, dataset_name='cifar10-valid' **kwargs):
+    def __init__(self, start, end, record_dic=None, shuffle_seed=0, inputs_shape=None, num_classes=10,
+                 dataset_name='cifar10-valid', feature_dir='./Get_Feature/NASBENCH_201_dict', **kwargs
+                ):
         """
         :param start: The start index of data you want to query.
         :param end: The end index of data you want to query.
@@ -347,9 +349,10 @@ class NasBench101Dataset(Dataset):
         self.end = end
         self.file_path = 'NasBench201Dataset_'+dataset_name
         self.shuffle_seed = shuffle_seed
-        self.cell_filename = path.join('./NASBENCH_201_dict', dataset_name+'_model_label.pkl')
+        self.cell_filename = path.join(feature_dir, dataset_name+'_model_label.pkl')
         self.total_layers = 19
         self.record_dic = record_dic
+        self.dataset_name = dataset_name
 
         if self.record_dic is not None:
             random.seed(shuffle_seed)
@@ -400,11 +403,29 @@ class NasBench101Dataset(Dataset):
             model_tensor.add(tf.keras.Sequential([Classifier(self.num_classes, spec.data_format)]))
 
             # Labels Y
-            y = np.zeros(4)  #  (train_accuracy, validation_accuracy, test_accuracy, training_time)
+            y = np.zeros(16)  
+
             y[0] = record[2]['train_accuracy']
             y[1] = record[2]['valid_accuracy']
             y[2] = record[2]['test_accuracy']
-            y[3] = record[2]['train_time']
+
+            y[3] = record[2]['train_loss']
+            y[4] = record[2]['valid_loss']
+            y[5] = record[2]['test_loss']
+
+            y[6] = record[2]['train_time']
+            y[7] = record[2]['valid_time']
+            y[8] = record[2]['test_time']
+
+            y[9] = record[2]['train_accu_time']
+            y[10] = record[2]['valid_accu_time']
+            y[11] = record[2]['test_accu_time']
+
+            if(self.dataset_name in ['cifar100', 'ImageNet16-120']):
+                y[12] = record[2]['x-test_accuracy']
+                y[13] = record[2]['x-test_loss']
+                y[14] = record[2]['x-test_time']
+                y[15] = record[2]['x-test_accu_time']
 
             # Node features X
             x = np.zeros((self.nodes, self.num_features), dtype=float)  # nodes * (features + metadata + num_layer)
@@ -663,9 +684,15 @@ if __name__ == '__main__':
         default='cifar10-valid',
         choices=['cifar10-valid', 'cifar10', 'cifar100', 'ImageNet16-120'],
     )
+    parser.add_argument(
+        "--feature_dir",
+        type=str,
+        help="Choosing which dataset to use",
+        default='./Get_Feature/NASBENCH_201_dict',
+    )
     args = parser.parse_args()
 
-    file = open(path.join('./NASBENCH_201_dict', args.dataset+'_model_label.pkl'), 'rb')
+    file = open(path.join(args.feature_dir, args.dataset+'_model_label.pkl'), 'rb')
     record = pickle.load(file)
     file.close()
 
@@ -673,6 +700,8 @@ if __name__ == '__main__':
     #                             end=len(record), inputs_shape=(None, 32, 32, 3), num_classes=10)
 
     # Test read()
-    
+    print("***** Start building datasets *****")
     dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
-                                 end=0, inputs_shape=(None, 32, 32, 3), num_classes=10)
+                                 end=100, inputs_shape=(None, 32, 32, 3), num_classes=10,
+                                 dataset_name=args.dataset, feature_dir=args.feature_dir
+                                )
