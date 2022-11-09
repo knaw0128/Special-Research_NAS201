@@ -380,6 +380,7 @@ class NasBench101Dataset(Dataset):
         total_layers = self.total_layers
 
         for record, no in zip(self.record_dic[self.start: self.end + 1], range(self.start, self.end + 1)):
+            print("Now at data No.{}".format(no))
             if os.path.exists(os.path.join(self.file_path, f'graph_{no}.npz')):
                 continue
 
