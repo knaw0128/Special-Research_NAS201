@@ -20,6 +20,8 @@ import re
 import hashlib
 import model_builder
 from argparse import ArgumentParser
+from tqdm.contrib import tzip
+from tqdm.auto import tqdm
 
 
 logging.basicConfig(filename='nas_bench_101_dataset.log', level=logging.INFO)
@@ -379,8 +381,8 @@ class NasBench101Dataset(Dataset):
 
         total_layers = self.total_layers
 
-        for record, no in zip(self.record_dic[self.start: self.end + 1], range(self.start, self.end + 1)):
-            print("Now at data No.{}".format(no))
+        for record, no in tzip(self.record_dic[self.start: self.end + 1], range(self.start, self.end + 1)):
+            # print("Now at data No.{}".format(no))
             if os.path.exists(os.path.join(self.file_path, f'graph_{no}.npz')):
                 continue
 
@@ -648,8 +650,8 @@ class NasBench101Dataset(Dataset):
     def read(self):
         output = [] 
 
-        for i in range(self.start, self.end + 1):
-            print("Now reading No. {}".format(i))
+        for i in tqdm(range(self.start, self.end + 1)):
+            # print("Now reading No. {}".format(i))
             data = np.load(os.path.join(self.file_path, f'graph_{i}.npz'))
             # 0: train_accuracy 1: valid_accuracy 2: test_accuracy 3: train_time
             label = np.delete(data['y'], [0,2,3], 0)
