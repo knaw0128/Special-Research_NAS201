@@ -692,7 +692,8 @@ if __name__ == '__main__':
         type=str,
         help="Choosing which dataset to use",
         default='./Get_Feature/NASBENCH_201_dict',
-    )parser.add_argument(
+    )
+    parser.add_argument(
         "--cuda_num",
         type=str,
         default='0',
