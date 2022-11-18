@@ -692,9 +692,13 @@ if __name__ == '__main__':
         type=str,
         help="Choosing which dataset to use",
         default='./Get_Feature/NASBENCH_201_dict',
+    )parser.add_argument(
+        "--cuda_num",
+        type=str,
+        default='0',
     )
     args = parser.parse_args()
-
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda_num
     file = open(path.join(args.feature_dir, args.dataset+'_model_label.pkl'), 'rb')
     record = pickle.load(file)
     file.close()
@@ -705,6 +709,6 @@ if __name__ == '__main__':
     # Test read()
     print("***** Start building datasets *****")
     dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
-                                 end=100, inputs_shape=(None, 32, 32, 3), num_classes=10,
+                                 end=15624, inputs_shape=(None, 32, 32, 3), num_classes=10,
                                  dataset_name=args.dataset, feature_dir=args.feature_dir
                                 )
