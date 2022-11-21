@@ -49,7 +49,7 @@ args = args_parse()
 ################################################################################
 # Load data
 ################################################################################
-model_label_path = os.path.join('./NASBENCH_201_dict', args.dataset+"_model_label.pkl")
+model_label_path = os.path.join('./Get_Feature/NASBENCH_201_dict', args.dataset+"_model_label.pkl")
 file = open(model_label_path, 'rb')
 record = pickle.load(file)
 file.close()
