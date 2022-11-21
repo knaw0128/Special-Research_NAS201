@@ -659,8 +659,8 @@ class NasBench101Dataset(Dataset):
             now = self.normalize(data['x'], self.features_dict['flops'])
             now = self.normalize(now, self.features_dict['params'])
             time = 1
-            if label[0] < 40:
-                time = 5
+            # if label[0] < 40:
+            #     time = 5
             for i in range(time):
                 output.append(
                     Graph(x=now, e=data['e'], a=data['a'], y=label)

@@ -11,6 +11,7 @@ from nas_bench_201_dataset import NasBench101Dataset
 from argparse import ArgumentParser, Namespace
 from spektral.data import BatchLoader
 from spektral.layers import ECCConv, GlobalSumPool
+from model_NAS import ECC_Net 
 
 ################################################################################
 # Config
@@ -18,23 +19,27 @@ from spektral.layers import ECCConv, GlobalSumPool
 # learning_rate = 1e-3    # Learning rate
 # epochs = 40             # Number of training epochs
 # batch_size = 8         # Batch size
-parser = ArgumentParser()
-parser.add_argument(
-    "--data_dir",
-    type=str,
-    help="Directory to the dataset.",
-    default="./data/",
-)
-parser.add_argument(
-    "--ckpt_dir",
-    type=str,
-    help="Directory to ckpt",
-    default="./ckpt",
-)
-parser.add_argument("--batch_size", type=int, default=8)
-parser.add_argument("--num_epoch", type=int, default=40)
-parser.add_argument("--lr", type=float, default=1e-3)
-args = parser.parse_args()
+def args_parse():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        help="Directory to the dataset.",
+        default="./data/",
+    )
+    parser.add_argument(
+        "--ckpt_dir",
+        type=str,
+        help="Directory to ckpt",
+        default="./ckpt",
+    )
+    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--num_epoch", type=int, default=40)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    args = parser.parse_args()
+    return args
+
+args = args_parse()
 ################################################################################
 # Load data
 ################################################################################
@@ -55,32 +60,7 @@ split = int(0.9 * len(dataset))
 idx_tr, idx_te = np.split(idxs, [split])
 dataset_tr, dataset_te = dataset[idx_tr], dataset[idx_te]
 
-
-################################################################################
-# Build model
-################################################################################
-class Net(tf.keras.models.Model):
-    def __init__(self):
-        super().__init__()
-        # self.masking = GraphMasking()
-        self.conv1 = ECCConv(32, activation="relu")
-        self.drop = tf.keras.layers.Dropout(0.3)
-        self.global_pool = GlobalSumPool()
-        self.dense = tf.keras.layers.Dense(n_out)
-        self.batchnorm = tf.keras.layers.BatchNormalization()
-
-    def call(self, inputs):
-        x, a, e = inputs
-        x = self.conv1([x, a, e])
-        x = self.batchnorm(x)
-        x = self.drop(x)
-        output = self.global_pool(x)
-        output = self.dense(output)
-
-        return output
-
-
-model = Net()
+model = ECC_Net()
 optimizer = tf.keras.optimizers.Adam(args.lr)
 model.compile(optimizer=optimizer, loss="mse")
 checkpoint_filepath = './checkpoint/checkpoint'
