@@ -33,6 +33,12 @@ def args_parse():
         help="Directory to ckpt",
         default="./ckpt",
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default='cifar10-valid',
+        choices=['cifar10-valid', 'cifar10', 'cifar100', 'ImageNet16-120'],
+    )
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--num_epoch", type=int, default=40)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -43,7 +49,8 @@ args = args_parse()
 ################################################################################
 # Load data
 ################################################################################
-file = open('./model_label.pkl', 'rb')
+model_label_path = os.path.join('./NASBENCH_201_dict', args.dataset+"_model_label.pkl")
+file = open(model_label_path, 'rb')
 record = pickle.load(file)
 file.close()
 dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
@@ -63,7 +70,7 @@ dataset_tr, dataset_te = dataset[idx_tr], dataset[idx_te]
 model = ECC_Net()
 optimizer = tf.keras.optimizers.Adam(args.lr)
 model.compile(optimizer=optimizer, loss="mse")
-checkpoint_filepath = './checkpoint/checkpoint'
+checkpoint_filepath = './checkpoint/'+args.dataset+"-"+args.num_epoch+"epo"
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=True,
