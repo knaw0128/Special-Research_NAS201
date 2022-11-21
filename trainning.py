@@ -70,7 +70,7 @@ dataset_tr, dataset_te = dataset[idx_tr], dataset[idx_te]
 model = ECC_Net()
 optimizer = tf.keras.optimizers.Adam(args.lr)
 model.compile(optimizer=optimizer, loss="mse")
-checkpoint_filepath = './checkpoint/'+args.dataset+"-"+args.num_epoch+"epo"
+checkpoint_filepath = './checkpoint/'+args.dataset+"-"+str(args.num_epoch)+"epo"
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=True,
