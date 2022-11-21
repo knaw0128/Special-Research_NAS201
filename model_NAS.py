@@ -37,13 +37,13 @@ class GIN_Net(tf.keras.models.Model):
 
     def call(self, inputs):
         x, a, e = inputs
-
+        adj = tf.squeeze(a)
         zero = tf.constant(0, dtype=tf.float32)
-        where = tf.not_equal(a, zero)
+        where = tf.not_equal(adj, zero)
         indices = tf.where(where)
-        values = tf.gather_nd(a, indices)
-        a_sparse = tf.SparseTensor(indices, values, a.shape)
-
+        values = tf.gather_nd(adj, indices)
+        a_sparse = tf.SparseTensor(indices, values, adj.shape)
+        
         x = self.conv1([x, a_sparse])
         x = self.batchnorm(x)
         x = self.drop(x)
