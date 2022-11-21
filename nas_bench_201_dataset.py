@@ -654,7 +654,31 @@ class NasBench101Dataset(Dataset):
             # print("Now reading No. {}".format(i))
             data = np.load(os.path.join(self.file_path, f'graph_{i}.npz'))
             # 0: train_accuracy 1: valid_accuracy 2: test_accuracy 3: train_time
-            label = np.delete(data['y'], [0,2,3], 0)
+            '''
+            0: train_accuracy
+            1: valid_accuracy
+            2: test_accuracy
+
+            3: train_loss
+            4: valid_loss
+            5: test_loss
+
+            6: train_time
+            7: valid_time
+            8: test_time
+
+            9: train_accu_time
+            10: valid_accu_time
+            11: test_accu_time
+
+            12: x-test_accuracy
+            13: x-test_loss
+            14: x-test_time
+            15: x-test_accu_time
+
+            '''
+            delete_label = [i for i in range(len(data['y'])) if i != 2 ]
+            label = np.delete(data['y'], delete_label, 0)
             # print(label)
             now = self.normalize(data['x'], self.features_dict['flops'])
             now = self.normalize(now, self.features_dict['params'])
