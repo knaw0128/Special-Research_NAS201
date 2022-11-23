@@ -322,7 +322,7 @@ def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, nu
 
     for i in range(num_stacks):
         if i > 0:
-            model.add(residual_block(ModelSpec))
+            model.add(residual_block(spec))
 
             init_channel *= 2
             shape[1] = shape[1] // 2
@@ -349,7 +349,7 @@ def build_arch_model(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=
 
     for i in range(num_stacks):
         if i > 0:
-            model.add(residual_block(ModelSpec))
+            model.add(residual_block(spec))
 
             init_channel *= 2
             shape[1] = shape[1] // 2
