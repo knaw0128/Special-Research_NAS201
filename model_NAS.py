@@ -38,6 +38,8 @@ class GIN_Net(tf.keras.models.Model):
     def call(self, inputs):
         x, a, e = inputs
         adj = tf.squeeze(a)
+        x = tf.squeeze(x)
+        
         zero = tf.constant(0, dtype=tf.float32)
         where = tf.not_equal(adj, zero)
         indices = tf.where(where)

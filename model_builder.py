@@ -290,6 +290,28 @@ class Arch_Model(tf.keras.Model):
         return tf.keras.Model(inputs=[x], outputs=self.call(x))
 '''
 
+class residual_block(tf.keras.Model):
+    def __init__(self, data_format='channels_last'):
+        super(residual_block, self).__init__()
+        self.pool = tf.keras.layers.AvgPool2D(
+                pool_size=(2, 2),
+                strides=(2, 2),
+                padding='same',
+                data_format=spec.data_format)
+        self.conv = tf.keras.layers.Conv2D(
+                filters=init_channel,
+                kernel_size=1,
+                strides=(1, 1),
+                use_bias=False,
+                kernel_initializer=tf.keras.initializers.VarianceScaling(),
+                padding='same',
+                data_format=spec.data_format)
+
+    def call(self, inputs):
+        x = self.pool(inputs)
+        x = self.conv(x)
+        return x
+
 
 def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=3, num_cells=5, is_training=None):
     model = tf.keras.Sequential()
@@ -300,20 +322,7 @@ def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, nu
 
     for i in range(num_stacks):
         if i > 0:
-            model.add(tf.keras.layers.AvgPool2D(
-                pool_size=(2, 2),
-                strides=(2, 2),
-                padding='same',
-                data_format=spec.data_format))
-
-            model.add(tf.keras.layers.Conv2D(
-                filters=init_channel,
-                kernel_size=1,
-                strides=(1, 1),
-                use_bias=False,
-                kernel_initializer=tf.keras.initializers.VarianceScaling(),
-                padding='same',
-                data_format=spec.data_format))
+            model.add(residual_block())
 
             init_channel *= 2
             shape[1] = shape[1] // 2
@@ -340,20 +349,7 @@ def build_arch_model(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=
 
     for i in range(num_stacks):
         if i > 0:
-            model.add(tf.keras.layers.AvgPool2D(
-                pool_size=(2, 2),
-                strides=(2, 2),
-                padding='same',
-                data_format=spec.data_format))
-
-            model.add(tf.keras.layers.Conv2D(
-                filters=init_channel,
-                kernel_size=1,
-                strides=(1, 1),
-                use_bias=False,
-                kernel_initializer=tf.keras.initializers.VarianceScaling(),
-                padding='same',
-                data_format=spec.data_format))
+            model.add(residual_block())
 
             init_channel *= 2
             shape[1] = shape[1] // 2
