@@ -310,7 +310,10 @@ class residual_block(tf.keras.Model):
 
     def call(self, inputs):
         x = self.pool(inputs)
+        x = self.activation(x)
         x = self.conv(x)
+        x = self.activation(x)
+        x = x + inputs
         return x
 
 

@@ -336,7 +336,7 @@ class NasBench101Dataset(Dataset):
         Direct use the dataset with set the start and end parameters,
         or if you want to preprocess again, unmark the marked download() function and set the all parameters.
         """
-        self.nodes = 126
+        self.nodes = 124
         self.features_dict = {'INPUT': 0, 'none': 1, 'skip_connect': 2, 'nor_conv_1x1': 3, 'nor_conv_3x3': 4,
                               'avg_pool_3x3': 5, 'OUTPUT': 6, 'Classifier': 7, 
                               'residual_block':8, 'convbn_3x3': 9, #for residual block and Input
@@ -458,13 +458,11 @@ class NasBench101Dataset(Dataset):
                     elif now_layer == 6:
                         offset_idx = 41
                         x[offset_idx][self.features_dict['residual_block']] = 1 
-                        x[offset_idx+1][self.features_dict['residual_block']] = 1 
                     elif now_layer == 12:
-                        offset_idx = 83
+                        offset_idx = 82
                         x[offset_idx][self.features_dict['residual_block']] = 1  
                     accumulation_layer += 1
-                    print(get_flops(model, profile_name, model.layers[now_layer].name))
-                    assert(0)
+                    
                     x[offset_idx][self.features_dict['num_layer']] = accumulation_layer
                     x[offset_idx][self.features_dict['flops']] = get_flops(model, profile_name, model.layers[now_layer].name)
                     x[offset_idx][self.features_dict['params']] = get_params(model.layers[now_layer])
@@ -475,8 +473,8 @@ class NasBench101Dataset(Dataset):
                         x[offset_idx][self.features_dict['output_shape_{}'.format(str(dim))]] = output_shape[dim]
                 else:
                     cell_layer = model.get_layer(name=model.layers[now_layer].name)
-                    now_group = (now_layer+1) // 7 + 1
-                    node_start_no = 1 + 2 * (now_group-1) + 8 * (now_layer - now_group * 2 + 1)
+                    now_group = now_layer // 6
+                    node_start_no = 1 + now_group + 8 * (now_layer - now_group - 1)
 
                     skip_cot = 0
                     for i in range(len(ops)):
@@ -500,17 +498,17 @@ class NasBench101Dataset(Dataset):
 
                     accumulation_layer += node_depth[-1]
 
-            x[125][self.features_dict['num_layer']] = accumulation_layer + 1
-            x[125][self.features_dict['Classifier']] = 1
-            x[125][self.features_dict['flops']] = get_flops(model, profile_name, model.layers[20].name)
-            x[125][self.features_dict['params']] = get_params(model.layers[20])
-            tensor = get_tensor_shape(model_tensor, model.layers[20].name)
+            x[123][self.features_dict['num_layer']] = accumulation_layer + 1
+            x[123][self.features_dict['Classifier']] = 1
+            x[123][self.features_dict['flops']] = get_flops(model, profile_name, model.layers[self.total_layers+1].name)
+            x[123][self.features_dict['params']] = get_params(model.layers[self.total_layers+1])
+            tensor = get_tensor_shape(model_tensor, model.layers[self.total_layers+1].name)
             input_shape, output_shape = tensor[0], tensor[1]
             for dim in range(1, 3 + 1):
-                x[125][self.features_dict['input_shape_{}'.format(str(dim))]] = input_shape[dim]
+                x[123][self.features_dict['input_shape_{}'.format(str(dim))]] = input_shape[dim]
 
             # The output_shape of classifier is only two dimension ([None, classes_num])
-            x[125][self.features_dict['output_shape_1']] = output_shape[1]
+            x[123][self.features_dict['output_shape_1']] = output_shape[1]
 
             # Adjacency matrix A
             adj_matrix = np.zeros((self.nodes, self.nodes), dtype=float)
@@ -521,21 +519,19 @@ class NasBench101Dataset(Dataset):
             # 17 cell
             # 25 cell
             # 33 cell
-            # 41 avgpool    (residual block)
-            # 42 1x1 conv   (residual block)
-            # 43 cell
-            # 51 cell
-            # 59 cell
-            # 67 cell
-            # 75 cell
-            # 83 avgpool    (residual block)
-            # 84 1x1 conv   (residual block)
-            # 85 cell
-            # 93 cell
-            # 101 cell
-            # 109 cell
-            # 117 cell
-            # 125 Classifier
+            # 41 residual block
+            # 42 cell
+            # 50 cell
+            # 58 cell
+            # 66 cell
+            # 74 cell
+            # 82 residual block
+            # 83 cell
+            # 91 cell
+            # 99 cell
+            # 107 cell
+            # 115 cell
+            # 123 Classifier
 
             for now_layer in range(layers + 1):
                 if now_layer == 0:
@@ -544,24 +540,22 @@ class NasBench101Dataset(Dataset):
                     else:
                         adj_matrix[0][1] = 1  # stem to input node
                 elif now_layer == 6:
-                    adj_matrix[40][41] = 1  # output to avgpool
-                    adj_matrix[40][43] = 1  # skip_connetion
+                    adj_matrix[40][41] = 1  # output to residual block
+                    # adj_matrix[40][42] = 1  # skip_connetion
                     if now_layer == layers:
                         adj_matrix[41][self.nodes - 1] = 1  # to classifier
                     else:
-                        adj_matrix[41][42] = 1  # avgpool to 1x1 conv
-                        adj_matrix[42][43] = 1  # 1x1 conv to input
+                        adj_matrix[41][42] = 1  # residual block to cell input
                 elif now_layer == 12:
-                    adj_matrix[82][83] = 1  # output to avgpool
-                    adj_matrix[82][85] = 1  #skip_connetion
+                    adj_matrix[81][82] = 1  # output to residual block
+                    # adj_matrix[81][83] = 1  # skip_connetion
                     if now_layer == layers:
                         adj_matrix[83][self.nodes - 1] = 1  # to classifier
                     else:
-                        adj_matrix[83][84] = 1  # avgpool to 1x1 conv
-                        adj_matrix[84][85] = 1  # 1x1 conv to input
+                        adj_matrix[82][83] = 1  # residual block to cell input
                 else:
-                    now_group = (now_layer+1) // 7 + 1
-                    node_start_no = 1 + 2 * (now_group-1) + 8 * (now_layer - now_group * 2 + 1)
+                    now_group = now_layer // 6
+                    node_start_no = 1 + now_group + 8 * (now_layer - now_group - 1)
                     for i in range(matrix.shape[0]):
                         if i == 7:
                             if now_layer == layers:
@@ -585,28 +579,26 @@ class NasBench101Dataset(Dataset):
                         e[0][1][0] = 16  # stem to input node
                 elif now_layer == 6:
                     e[40][41][0] = 16  # output to avgpool
-                    e[40][43][0] = 16  # skip_connetion
+                    # e[40][42][0] = 16  # skip_connetion
                     if now_layer == layers:
                         e[41][self.nodes - 1][0] = 16
                     else:
                         e[41][42][0] = 16  # avgpool to 1x1 conv
-                        e[42][43][0] = 16  # skip_connetion
-                elif now_layer == 13:
-                    e[82][83][0] = 32  # output to avgpool
-                    e[82][85][0] = 32  # skip_connetion
+                elif now_layer == 12:
+                    e[81][82][0] = 32  # output to avgpool
+                    # e[81][83][0] = 32  # skip_connetion
                     if now_layer == layers:
                         e[83][self.nodes - 1][0] = 32
                     else:
-                        e[83][84][0] = 32  # avgpool to 1x1 conv
-                        e[84][85][0] = 32  # skip_connetion
+                        e[82][83][0] = 32  # avgpool to 1x1 conv
                 else:
-                    now_group = (now_layer+1) // 7 + 1
-                    node_start_no = 1 + 2 * (now_group-1) + 8 * (now_layer - now_group * 2 + 1)
-                    now_channel = pow(2, now_group-1) * 16
+                    now_group = now_layer // 6
+                    node_start_no = 1 + now_group + 8 * (now_layer - now_group - 1)
+                    now_channel = pow(2, now_group) * 16
 
                     if now_layer == 1:
                         tmp_channels = compute_vertex_channels(now_channel, now_channel, spec.matrix)
-                    elif now_layer == 8 or now_layer == 15:
+                    elif now_layer == 7 or now_layer == 13:
                         tmp_channels = compute_vertex_channels(now_channel // 2, now_channel, spec.matrix)
                     else:
                         tmp_channels = compute_vertex_channels(now_channel, now_channel, spec.matrix)
