@@ -300,7 +300,7 @@ class residual_block(tf.keras.Model):
                 data_format=spec.data_format)
 
         self.conv1x1 = tf.keras.layers.Conv2D(
-                filters=init_channel,
+                filters=init_channel*2,
                 kernel_size=1,
                 strides=(1, 1),
                 use_bias=False,
@@ -308,7 +308,7 @@ class residual_block(tf.keras.Model):
                 data_format=spec.data_format)
 
         self.conv3x3 = tf.keras.layers.Conv2D(
-                filters=init_channel,
+                filters=init_channel*2,
                 kernel_size=3,
                 strides=2,
                 padding='same',
@@ -321,13 +321,11 @@ class residual_block(tf.keras.Model):
 
     def call(self, inputs):
         x = self.conv3x3(inputs)
-        x = self.activation(x)
-        x = self.conv3x3(x)
-
         identity = self.AvgPool(inputs)
         identity = self.conv1x1(identity)
         # output = tf.keras.layers.Add([x,identity])
         output = identity + x
+        output = self.activation(output)
         return output
 
 def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=3, num_cells=5, is_training=None):
