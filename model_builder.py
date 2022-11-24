@@ -323,10 +323,10 @@ class residual_block(tf.keras.Model):
         x = self.conv3x3(inputs)
         x = self.activation(x)
         x = self.conv3x3(x)
-
+        
         identity = self.AvgPool(inputs)
         identity = self.conv1x1(identity)
-
+        # output = tf.keras.layers.Add([x,identity])
         output = identity + x
         output = self.activation(output)
         return output
