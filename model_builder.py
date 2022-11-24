@@ -296,6 +296,7 @@ class residual_block(tf.keras.Model):
         self.AvgPool = tf.keras.layers.AvgPool2D(
                 pool_size=2,
                 strides=2,
+                padding='same',
                 data_format=spec.data_format)
 
         self.conv1x1 = tf.keras.layers.Conv2D(
