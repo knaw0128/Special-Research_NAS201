@@ -511,7 +511,7 @@ class NasBench101Dataset(Dataset):
             x[123][self.features_dict['output_shape_1']] = output_shape[1]
 
             # Adjacency matrix A
-            adj_matrix = np.zeros((self.nodes, self.nodes), dtype=float)
+            adj_matrix = np.zeros((self.nodes, self.nodes), dtype=float) 
 
             # 0 convbn 16
             # 1 cell

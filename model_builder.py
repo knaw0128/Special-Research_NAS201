@@ -294,21 +294,21 @@ class residual_block(tf.keras.Model):
     def __init__(self, spec, init_channel, data_format='channels_last'):
         super(residual_block, self).__init__()
         self.AvgPool = tf.keras.layers.AvgPool2D(
-                pool_size=(2, 2),
-                strides=(2, 2),
+                pool_size=2,
+                strides=2,
                 padding='same',
                 data_format=spec.data_format)
 
         self.conv1x1 = tf.keras.layers.Conv2D(
-                filters=init_channel*2,
+                filters=init_channel,
                 kernel_size=1,
-                strides=(1, 1),
+                strides=2,
                 use_bias=False,
                 kernel_initializer=tf.keras.initializers.VarianceScaling(),
                 data_format=spec.data_format)
 
         self.conv3x3 = tf.keras.layers.Conv2D(
-                filters=init_channel*2,
+                filters=init_channel,
                 kernel_size=3,
                 strides=2,
                 padding='same',
@@ -321,9 +321,12 @@ class residual_block(tf.keras.Model):
 
     def call(self, inputs):
         x = self.conv3x3(inputs)
+        x = self.activation(x)
+        x = self.conv3x3(x)
+
         identity = self.AvgPool(inputs)
         identity = self.conv1x1(identity)
-        # output = tf.keras.layers.Add([x,identity])
+
         output = identity + x
         output = self.activation(output)
         return output
