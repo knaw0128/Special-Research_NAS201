@@ -296,6 +296,7 @@ class residual_block(tf.keras.Model):
         self.AvgPool = tf.keras.layers.AvgPool2D(
                 pool_size=2,
                 strides=2,
+                padding="same",
                 data_format=spec.data_format)
 
         self.conv1x1 = tf.keras.layers.Conv2D(
@@ -303,14 +304,16 @@ class residual_block(tf.keras.Model):
                 kernel_size=1,
                 strides=2,
                 use_bias=False,
+                padding="same",
                 kernel_initializer=tf.keras.initializers.VarianceScaling(),
                 data_format=spec.data_format)
 
-        self.conv2x2 = tf.keras.layers.Conv2D(
+        self.conv3x3 = tf.keras.layers.Conv2D(
                 filters=init_channel,
-                kernel_size=2,
+                kernel_size=3,
                 strides=2,
                 use_bias=False,
+                padding="same",
                 kernel_initializer=tf.keras.initializers.VarianceScaling(),
                 data_format=spec.data_format)
         
@@ -318,9 +321,9 @@ class residual_block(tf.keras.Model):
         self.activation = tf.keras.layers.ReLU()
 
     def call(self, inputs):
-        x = self.conv2x2(inputs)
+        x = self.conv3x3(inputs)
         x = self.activation(x)
-        x = self.conv2x2(x)
+        x = self.conv3x3(x)
         
         identity = self.AvgPool(inputs)
         identity = self.conv1x1(identity)
@@ -341,8 +344,8 @@ def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, nu
             model.add(residual_block(spec, init_channel))
 
             init_channel *= 2
-            shape[1] = shape[1] // 2
-            shape[2] = shape[2] // 2
+            # shape[1] = shape[1] // 2
+            # shape[2] = shape[2] // 2
 
         for j in range(num_cells):
             if j > 0:
@@ -368,8 +371,8 @@ def build_arch_model(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=
             model.add(residual_block(spec, init_channel))
 
             init_channel *= 2
-            shape[1] = shape[1] // 2
-            shape[2] = shape[2] // 2
+            # shape[1] = shape[1] // 2
+            # shape[2] = shape[2] // 2
 
         for j in range(num_cells):
             if j > 0:
