@@ -1,7 +1,7 @@
 from spektral.data import Dataset, Graph
 import numpy as np
 import tensorflow as tf
-from spektral.layers import ECCConv, GlobalSumPool, GINConv
+from spektral.layers import ECCConv, GlobalSumPool, GINConvBatch
 
 
 
@@ -29,7 +29,7 @@ class GIN_Net(tf.keras.models.Model):
     def __init__(self):
         super().__init__()
         # self.masking = GraphMasking()
-        self.conv1 = GINConv(32, activation="relu")
+        self.conv1 = GINConvBatch(32, activation="relu")
         self.drop = tf.keras.layers.Dropout(0.3)
         self.global_pool = GlobalSumPool()
         self.dense = tf.keras.layers.Dense(1) # same as dataset.n_labels
@@ -37,16 +37,8 @@ class GIN_Net(tf.keras.models.Model):
 
     def call(self, inputs):
         x, a, e = inputs
-        adj = tf.squeeze(a)
-        x = tf.squeeze(x)
-        
-        zero = tf.constant(0, dtype=tf.float32)
-        where = tf.not_equal(adj, zero)
-        indices = tf.where(where)
-        values = tf.gather_nd(adj, indices)
-        a_sparse = tf.SparseTensor(indices, values, adj.shape)
-        
-        x = self.conv1([x, a_sparse])
+
+        x = self.conv1([x, a])
         x = self.batchnorm(x)
         x = self.drop(x)
         output = self.global_pool(x)
