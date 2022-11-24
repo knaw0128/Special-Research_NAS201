@@ -541,14 +541,12 @@ class NasBench101Dataset(Dataset):
                         adj_matrix[0][1] = 1  # stem to input node
                 elif now_layer == 6:
                     adj_matrix[40][41] = 1  # output to residual block
-                    # adj_matrix[40][42] = 1  # skip_connetion
                     if now_layer == layers:
                         adj_matrix[41][self.nodes - 1] = 1  # to classifier
                     else:
                         adj_matrix[41][42] = 1  # residual block to cell input
                 elif now_layer == 12:
                     adj_matrix[81][82] = 1  # output to residual block
-                    # adj_matrix[81][83] = 1  # skip_connetion
                     if now_layer == layers:
                         adj_matrix[83][self.nodes - 1] = 1  # to classifier
                     else:
@@ -579,29 +577,22 @@ class NasBench101Dataset(Dataset):
                         e[0][1][0] = 16  # stem to input node
                 elif now_layer == 6:
                     e[40][41][0] = 16  # output to avgpool
-                    # e[40][42][0] = 16  # skip_connetion
                     if now_layer == layers:
                         e[41][self.nodes - 1][0] = 16
                     else:
-                        e[41][42][0] = 16  # avgpool to 1x1 conv
+                        e[41][42][0] = 32  # avgpool to 1x1 conv
                 elif now_layer == 12:
                     e[81][82][0] = 32  # output to avgpool
-                    # e[81][83][0] = 32  # skip_connetion
                     if now_layer == layers:
                         e[83][self.nodes - 1][0] = 32
                     else:
-                        e[82][83][0] = 32  # avgpool to 1x1 conv
+                        e[82][83][0] = 64  # avgpool to 1x1 conv
                 else:
                     now_group = now_layer // 6
                     node_start_no = 1 + now_group + 8 * (now_layer - now_group - 1)
                     now_channel = pow(2, now_group) * 16
 
-                    if now_layer == 1:
-                        tmp_channels = compute_vertex_channels(now_channel, now_channel, spec.matrix)
-                    elif now_layer == 7 or now_layer == 13:
-                        tmp_channels = compute_vertex_channels(now_channel // 2, now_channel, spec.matrix)
-                    else:
-                        tmp_channels = compute_vertex_channels(now_channel, now_channel, spec.matrix)
+                    tmp_channels = compute_vertex_channels(now_channel, now_channel, spec.matrix)
 
                     # fix channels length to number of nudes
                     node_channels = [0] * num_nodes

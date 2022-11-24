@@ -293,29 +293,42 @@ class Arch_Model(tf.keras.Model):
 class residual_block(tf.keras.Model):
     def __init__(self, spec, init_channel, data_format='channels_last'):
         super(residual_block, self).__init__()
-        self.pool = tf.keras.layers.AvgPool2D(
+        self.AvgPool = tf.keras.layers.AvgPool2D(
                 pool_size=(2, 2),
                 strides=(2, 2),
                 padding='same',
                 data_format=spec.data_format)
-        self.conv = tf.keras.layers.Conv2D(
+
+        self.conv1x1 = tf.keras.layers.Conv2D(
                 filters=init_channel,
                 kernel_size=1,
                 strides=(1, 1),
                 use_bias=False,
                 kernel_initializer=tf.keras.initializers.VarianceScaling(),
-                padding='same',
                 data_format=spec.data_format)
+
+        self.conv3x3 = tf.keras.layers.Conv2D(
+                filters=init_channel,
+                kernel_size=3,
+                strides=2,
+                padding='same',
+                use_bias=False,
+                kernel_initializer=tf.keras.initializers.VarianceScaling(),
+                data_format=spec.data_format)
+        
+        # self.bn = tf.keras.layers.BatchNormalization()
         self.activation = tf.keras.layers.ReLU()
 
     def call(self, inputs):
-        x = self.pool(inputs)
+        x = self.conv3x3(inputs)
         x = self.activation(x)
-        x = self.conv(x)
-        x = self.activation(x)
-        x = x + inputs
-        return x
+        x = self.conv3x3(x)
 
+        identity = self.AvgPool(inputs)
+        identity = self.conv1x1(identity)
+        # output = tf.keras.layers.Add([x,identity])
+        output = identity + x
+        return output
 
 def build_arch_model_original(spec: ModelSpec, inputs_shape, init_channel=16, num_stacks=3, num_cells=5, is_training=None):
     model = tf.keras.Sequential()
