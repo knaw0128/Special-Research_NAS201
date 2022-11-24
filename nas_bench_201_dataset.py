@@ -339,10 +339,10 @@ class NasBench101Dataset(Dataset):
         self.nodes = 126
         self.features_dict = {'INPUT': 0, 'none': 1, 'skip_connect': 2, 'nor_conv_1x1': 3, 'nor_conv_3x3': 4,
                               'avg_pool_3x3': 5, 'OUTPUT': 6, 'Classifier': 7, 
-                              'avg_pool_2x2':8, 'conv_1x1':9, 'convbn_3x3': 10, #for residual block and Input
-                              'flops': 11, 'params': 12, 'num_layer': 13,
-                              'input_shape_1': 14, 'input_shape_2': 15, 'input_shape_3': 16, 'output_shape_1': 17,
-                              'output_shape_2': 18, 'output_shape_3': 19}
+                              'residual_block':8, 'convbn_3x3': 9, #for residual block and Input
+                              'flops': 10, 'params': 11, 'num_layer': 12,
+                              'input_shape_1': 13, 'input_shape_2': 14, 'input_shape_3': 15, 'output_shape_1': 16,
+                              'output_shape_2': 17, 'output_shape_3': 18}
 
         self.num_features = len(self.features_dict)
         self.inputs_shape = inputs_shape
@@ -352,7 +352,7 @@ class NasBench101Dataset(Dataset):
         self.file_path = 'NasBench201Dataset_'+dataset_name
         self.shuffle_seed = shuffle_seed
         self.cell_filename = path.join(feature_dir, dataset_name+'_model_label.pkl')
-        self.total_layers = 19
+        self.total_layers = 17
         self.record_dic = record_dic
         self.dataset_name = dataset_name
 
@@ -450,25 +450,21 @@ class NasBench101Dataset(Dataset):
             # num layer indicate that the node is on the layer i (1-base).
 
             accumulation_layer = 0
-            for now_layer in range(19 + 1):
-                if now_layer == 0 or now_layer == 6 or now_layer == 14 or now_layer == 7 or now_layer == 13:
+            for now_layer in range(self.total_layers + 1):
+                if now_layer == 0 or now_layer == 6 or now_layer == 12:
                     if now_layer == 0:
                         offset_idx = 0
                         x[offset_idx][self.features_dict['convbn_3x3']] = 1 
                     elif now_layer == 6:
                         offset_idx = 41
-                        x[offset_idx][self.features_dict['avg_pool_2x2']] = 1 
-                    elif now_layer == 7:
-                        offset_idx = 42
-                        x[offset_idx][self.features_dict['conv_1x1']] = 1  
-                    elif now_layer == 13:
+                        x[offset_idx][self.features_dict['residual_block']] = 1 
+                        x[offset_idx+1][self.features_dict['residual_block']] = 1 
+                    elif now_layer == 12:
                         offset_idx = 83
-                        x[offset_idx][self.features_dict['avg_pool_2x2']] = 1 
-                    elif now_layer == 14:
-                        offset_idx = 84
-                        x[offset_idx][self.features_dict['conv_1x1']] = 1  
+                        x[offset_idx][self.features_dict['residual_block']] = 1  
                     accumulation_layer += 1
-
+                    print(get_flops(model, profile_name, model.layers[now_layer].name))
+                    assert(0)
                     x[offset_idx][self.features_dict['num_layer']] = accumulation_layer
                     x[offset_idx][self.features_dict['flops']] = get_flops(model, profile_name, model.layers[now_layer].name)
                     x[offset_idx][self.features_dict['params']] = get_params(model.layers[now_layer])
@@ -555,7 +551,7 @@ class NasBench101Dataset(Dataset):
                     else:
                         adj_matrix[41][42] = 1  # avgpool to 1x1 conv
                         adj_matrix[42][43] = 1  # 1x1 conv to input
-                elif now_layer == 13:
+                elif now_layer == 12:
                     adj_matrix[82][83] = 1  # output to avgpool
                     adj_matrix[82][85] = 1  #skip_connetion
                     if now_layer == layers:
@@ -563,8 +559,6 @@ class NasBench101Dataset(Dataset):
                     else:
                         adj_matrix[83][84] = 1  # avgpool to 1x1 conv
                         adj_matrix[84][85] = 1  # 1x1 conv to input
-                elif now_layer == 7 or now_layer ==14:
-                    continue
                 else:
                     now_group = (now_layer+1) // 7 + 1
                     node_start_no = 1 + 2 * (now_group-1) + 8 * (now_layer - now_group * 2 + 1)

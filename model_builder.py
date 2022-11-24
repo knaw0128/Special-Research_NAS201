@@ -306,6 +306,7 @@ class residual_block(tf.keras.Model):
                 kernel_initializer=tf.keras.initializers.VarianceScaling(),
                 padding='same',
                 data_format=spec.data_format)
+        self.activation = tf.keras.layers.ReLU()
 
     def call(self, inputs):
         x = self.pool(inputs)
