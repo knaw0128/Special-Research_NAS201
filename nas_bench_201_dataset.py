@@ -710,12 +710,14 @@ if __name__ == '__main__':
 
     # Test read()
     num_class = 10
+    inputs_shape=(None, 32, 32, 3)
     if args.dataset=='cifar100':
         num_class = 100
     if args.dataset=='ImageNet16-120':
         num_class = 120
+        inputs_shape=(None, 16, 16, 3)
     print("***** Start building datasets *****")
     dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
-                                 end=15624, inputs_shape=(None, 32, 32, 3), num_classes=num_class,
+                                 end=15624, inputs_shape=inputs_shape, num_classes=num_class,
                                  dataset_name=args.dataset, feature_dir=args.feature_dir
                                 )
