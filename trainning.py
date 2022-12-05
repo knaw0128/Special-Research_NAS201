@@ -11,8 +11,8 @@ from nas_bench_201_dataset import NasBench101Dataset
 from argparse import ArgumentParser, Namespace
 from spektral.data import BatchLoader
 from spektral.layers import ECCConv, GlobalSumPool
-from model_NAS import ECC_Net 
-
+from model_NAS import ECC_Net, GIN_Net 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 ################################################################################
 # Config
 ################################################################################
@@ -54,7 +54,7 @@ file = open(model_label_path, 'rb')
 record = pickle.load(file)
 file.close()
 dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
-                                end=15624, inputs_shape=(None, 32, 32, 3), num_classes=10)
+                                end=15624, inputs_shape=(None, 32, 32, 3), num_classes=10, dataset_name=args.dataset)
 
 # Parameters
 F = dataset.n_node_features  # Dimension of node features
