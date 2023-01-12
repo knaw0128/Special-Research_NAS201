@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 from spektral.data import BatchLoader
 from model_NAS import ECC_Net, GIN_Net 
 from tqdm import tqdm
+import tensorflow_addons as tfa
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 ################################################################################
 # Config
@@ -38,7 +39,7 @@ def args_parse():
         choices=['cifar10-valid', 'cifar10', 'cifar100', 'ImageNet16-120'],
     )
     parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--num_epoch", type=int, default=40)
+    parser.add_argument("--num_epoch", type=int, default=99999)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--do_train", action="store_true")
     args = parser.parse_args()
@@ -53,8 +54,8 @@ def K_rank(data): # input is an list of pair, containing prediction and true val
         inputs = data.copy()
         np.random.shuffle(inputs)
         inputs = inputs[:min(100, len(data))]
-        for i in range(n):
-            for j in range(i+1, n):
+        for i in range(len(inputs)):
+            for j in range(i+1, len(inputs)):
                 if  (inputs[i][0] > inputs[j][0] and inputs[i][1] < inputs[j][1]) or \
                     (inputs[i][0] < inputs[j][0] and inputs[i][1] > inputs[j][1]) :
                     disorder += 1
@@ -63,19 +64,21 @@ def K_rank(data): # input is an list of pair, containing prediction and true val
     return [np.mean(ans), np.std(ans), np.max(ans), np.min(ans)]
 
 
-def MAP(all): # input is an list of pair, containing prediction and true value
+def MAP(data): # input is an list of pair, containing prediction and true value
     ret = []
     for k in range(1000):
-        inputs = all.copy()
-        n = len(inputs)
+        inputs = data.copy()
+        n = len(data)
         for i in range(n):
             inputs[i].append(i)
         
         np.random.shuffle(inputs)
         inputs = inputs[:min(100, n)]
 
-        true_rank = [data[2] for data in inputs.sort(key=lambda x: x[1])]
-        pred_rank = [data[2] for data in inputs.sort(key=lambda x: x[0])]
+        inputs.sort(key=lambda x: x[1])
+        true_rank = [data[2] for data in inputs]
+        inputs.sort(key=lambda x: x[0])
+        pred_rank = [data[2] for data in inputs]
 
         ans = 0.0
         for i in range(1,n+1):
@@ -90,32 +93,43 @@ def MAP(all): # input is an list of pair, containing prediction and true value
 def NDCG(all): # input is an list of pair, containing prediction and true value
 
     ret = []
+    def dcg_score(y_true, y_score):
+        order = np.argsort(y_score)[::-1]
+        y_true = np.take(y_true, order)
+
+        gains = y_true
+        # highest rank is 1 so +2 instead of +1
+        discounts = np.log2(np.arange(len(y_true)) + 2)
+        return np.sum(gains / discounts)
     for k in range(1000):
         inputs = all.copy()
-        n = len(inputs)
-        for i in range(n):
-            inputs[i].append(i)
-        
         np.random.shuffle(inputs)
-        inputs = inputs[:min(100, n)]
+        inputs = inputs[:min(100, len(inputs))]
+        y_true = np.array([data[0] for data in inputs])
+        y_score = np.array([data[1] for data in inputs])
 
-        true_rank = [data[2] for data in inputs.sort(key=lambda x: x[1])]
-        pred_rank = [data[2] for data in inputs.sort(key=lambda x: x[0])]
-
-        
-        idcg = 0.0
-        for i in range(len(true_rank)):
-            idcg += true_rank[i]/math.log2(2+i)
-        
-        dcg = 0.0
-        for i in range(len(pred_rank)):
-            dcg += pred_rank[i]/math.log2(2+i)
-            
-        ret.append(dcg / idcg)
+        best = dcg_score(y_true, y_true)
+        actual = dcg_score(y_true, y_score)
+        ret.append(actual / best)
     
     return [np.mean(ret), np.std(ret), np.max(ret), np.min(ret)]
     
+def MAE(inputs): # input is an list of pair, containing prediction and true value
+
+    ret = []
+    for i in inputs:
+        ret.append(abs(i[0]-i[1]))
     
+    return np.mean(ret)
+
+def MSE(inputs): # input is an list of pair, containing prediction and true value
+
+    ret = []
+    for i in inputs:
+        ret.append((i[0]-i[1])**2)
+    
+    return np.mean(ret)
+
 
 
 args = args_parse()
@@ -127,7 +141,7 @@ file = open(model_label_path, 'rb')
 record = pickle.load(file)
 file.close()
 dataset = NasBench101Dataset(record_dic=record, shuffle_seed=0, start=0,
-                                end=156, inputs_shape=(None, 32, 32, 3), num_classes=10, dataset_name=args.dataset)
+                                end=15624, inputs_shape=(None, 32, 32, 3), num_classes=10, dataset_name=args.dataset)
 
 # Parameters
 F = dataset.n_node_features  # Dimension of node features
@@ -137,30 +151,46 @@ n_out = dataset.n_labels  # Dimension of the target
 # Train/test split
 np.random.seed(114514)
 idxs = np.random.permutation(len(dataset))
-split = int(0.9 * len(dataset))
-idx_tr, idx_te = np.split(idxs, [split])
-dataset_tr, dataset_te = dataset[idx_tr], dataset[idx_te]
-
-print("Loading")
-model = GIN_Net()
-print("Finish")
-optimizer = tf.keras.optimizers.Adam(args.lr)
-model.compile(optimizer=optimizer, loss="mse")
-checkpoint_filepath = './checkpoint/'+args.dataset+"-"+str(args.num_epoch)+"epo"
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=checkpoint_filepath,
-    save_weights_only=True,
-    monitor='loss',
-    mode='min',
-    save_best_only=True)
+split = [ 1000*i for i in range(1,14) ]
+# split = int( 0.9 * len(dataset))
+# idx_all = np.split(idxs, split)
+idx_all = np.split(idxs, split)
+idx_trs = idx_all[:13]
+idx_te = idx_all[13]
 
 ################################################################################
 # Fit model
 ################################################################################
 if args.do_train:
-    loader_tr = BatchLoader(dataset_tr, batch_size=args.batch_size, mask=True)
-    model.fit(loader_tr.load(), steps_per_epoch=loader_tr.steps_per_epoch, 
-                epochs=args.num_epoch, callbacks=[model_checkpoint_callback])
+
+    now_idx = np.array([],dtype="int64")
+    for dataset_len in range(13):
+        now_idx = np.concatenate((now_idx, idx_trs[dataset_len]),dtype=idx_trs[dataset_len].dtype)
+        dataset_tr = dataset[now_idx]
+        loader_tr = BatchLoader(dataset_tr, batch_size=args.batch_size, mask=True)
+        
+        model = GIN_Net()
+        optimizer = tf.keras.optimizers.Adam(args.lr)
+        model.compile(optimizer=optimizer, loss="mse") # loss = tfa.losses.TripletHardLoss()
+        checkpoint_filepath = './checkpoint/'+args.dataset+"_datasize_"+str(1000*(dataset_len+1))
+        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=checkpoint_filepath,
+            save_weights_only=True,
+            monitor='loss',
+            mode='min',
+            save_best_only=True)
+
+        early_stop_callback = tf.keras.callbacks.EarlyStopping(
+            monitor="loss",
+            min_delta=0,
+            patience=25,
+            verbose=0,
+            mode="min",
+            baseline=None,
+            restore_best_weights=False,
+        )
+        model.fit(loader_tr.load(), steps_per_epoch=loader_tr.steps_per_epoch, 
+                    epochs=args.num_epoch, callbacks=[model_checkpoint_callback, early_stop_callback])
 
 # ################################################################################
 # # Evaluate model
@@ -183,7 +213,7 @@ for i,data in enumerate(loader_me.load()):
 
     # print(model.predict(data[0])[0][0])
     # print(data[1][0][0])
-    metric_input.append([model.predict(data[0], verbose=0), data[1]])
+    metric_input.append([model.predict(data[0], verbose=0)[0][0], data[1][0][0]])
     progress.update(1)
     # assert(0)
 print(K_rank(metric_input))
