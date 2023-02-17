@@ -12,6 +12,7 @@ from model_NAS import ECC_Net, GIN_Net
 from tqdm import tqdm
 import tensorflow_addons as tfa
 import matplotlib.pyplot as plt
+from scipy.stats import kendalltau
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 ################################################################################
@@ -40,6 +41,15 @@ def args_parse():
         default='cifar10-valid',
         choices=['cifar10-valid', 'cifar10', 'cifar100', 'ImageNet16-120'],
     )
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default='mse',
+        choices=[   
+                    'contrastive_loss', 'triplet_hard_loss', 'triplet_semihard_loss', 
+                    'npairs_loss', 'npairs_multilabel_loss', 'mse'
+                ],
+    )
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--num_epoch", type=int, default=99999)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -58,12 +68,10 @@ def K_rank(data): # input is an list of pair, containing prediction and true val
         inputs = data.copy()
         np.random.shuffle(inputs)
         inputs = inputs[:min(100, len(data))]
-        for i in range(len(inputs)):
-            for j in range(i+1, len(inputs)):
-                if  (inputs[i][0] > inputs[j][0] and inputs[i][1] < inputs[j][1]) or \
-                    (inputs[i][0] < inputs[j][0] and inputs[i][1] > inputs[j][1]) :
-                    disorder += 1
-        ans.append(1 - 2 * disorder / (n*(n-1)/2))
+        pred_list = [data[0] for data in inputs]
+        true_list = [data[1] for data in inputs]
+        kt, p = kendalltau(pred_list, true_list)
+        ans.append(kt)
 
     return [np.mean(ans), np.std(ans), np.max(ans), np.min(ans)]
 
@@ -135,6 +143,14 @@ def MSE(inputs): # input is an list of pair, containing prediction and true valu
 
 
 args = args_parse()
+LossMenu =  {    
+                'mse' : 'mse',
+                'contrastive_loss' : tfa.losses.ContrastiveLoss(), 
+                'triplet_hard_loss' : tfa.losses.TripletHardLoss(), 
+                'triplet_semihard_loss' : tfa.losses.TripletSemiHardLoss(), 
+                'npairs_loss' : tfa.losses.NpairsLoss(), 
+                'npairs_multilabel_loss' : tfa.losses.NpairsMultilabelLoss(),
+            }
 ################################################################################
 # Load data
 ################################################################################
@@ -176,8 +192,11 @@ for dataset_len in range(13):
     
     model = GIN_Net()
     optimizer = tf.keras.optimizers.Adam(args.lr)
-    model.compile(optimizer=optimizer, loss="mse") # loss = tfa.losses.TripletHardLoss()
+    model.compile(optimizer=optimizer, loss = LossMenu[args.loss])
     checkpoint_filepath = './checkpoint/'+args.dataset+"_datasize_"+str(1000*(dataset_len+1))
+
+    if args.loss != 'mse':
+        checkpoint_filepath += "_loss_" + args.loss
 
     if args.do_train:
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -231,21 +250,21 @@ plt.plot(train_size, [data[0] for data in K_ranks])
 plt.plot(train_size, [data[1] for data in K_ranks])
 plt.plot(train_size, [data[2] for data in K_ranks])
 plt.plot(train_size, [data[3] for data in K_ranks])
-plt.savefig("K_rank.png")
+plt.savefig(f"K_rank_{args.dataset}_{args.loss}.png")
 
 plt.figure(2)
 plt.plot(train_size, [data[0] for data in MAPs])
 plt.plot(train_size, [data[1] for data in MAPs])
 plt.plot(train_size, [data[2] for data in MAPs])
 plt.plot(train_size, [data[3] for data in MAPs])
-plt.savefig("MAP.png")
+plt.savefig(f"MAP_{args.dataset}_{args.loss}.png")
 
 plt.figure(3)
 plt.plot(train_size, [data[0] for data in NDCGs])
 plt.plot(train_size, [data[1] for data in NDCGs])
 plt.plot(train_size, [data[2] for data in NDCGs])
 plt.plot(train_size, [data[3] for data in NDCGs])
-plt.savefig("NDCG.png")
+plt.savefig(f"NDCG_{args.dataset}_{args.loss}.png")
 
 
 
